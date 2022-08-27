@@ -26,7 +26,9 @@ The code was run twice for both the platform . The the tensorboad training plots
  
 At the end of the training (mean reward = 19) 
 
-https://user-images.githubusercontent.com/6441064/187033067-5254b347-c7e5-4977-afe9-859daa7c4667.mp4
+https://user-images.githubusercontent.com/6441064/187033429-da68b3b3-42e5-4735-a407-c3d14729dc31.mp4
+
+
 
 
 
