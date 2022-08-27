@@ -22,9 +22,19 @@ The code was run twice for both the platform . The the tensorboad training plots
 
 
 
+(4) Once a model is trained, a simulation video for the game can be generated using the script 01_tf_dqn_play.py in the repo.
+ 
+At the early state of training (mean reward = -10)
+
+https://user-images.githubusercontent.com/6441064/187033061-b1ff693b-f599-4d14-86b2-00c743c98c12.mp4
+
+At the end of the training (mean reaard = 19) 
+
+https://user-images.githubusercontent.com/6441064/187033067-5254b347-c7e5-4977-afe9-859daa7c4667.mp4
 
 
-https://user-images.githubusercontent.com/6441064/187032968-53ecc7dd-9d46-42ab-ab2f-67201354bf54.mp4
+
+
 
 
 
