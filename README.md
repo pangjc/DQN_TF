@@ -5,8 +5,10 @@ Deep Q Network implemented using Tensorflow
 
 (2) This repo is inspired by Maxim Lapan's "Deep Reinformance Learning Hands-on (2nd Edition)" book along with its github repo implemened by Pytorch https://github.com/PacktPublishing/Deep-Reinforcement-Learning-Hands-On-Second-Edition. The infrastructure on fetching data from Atari is customized from Lapan's code.
 
-(3) This repo is tested on both Nvidia (ubuntu 20.04 + i7 9700 + 32Gb RAM + RTX 2060 + cuda 11.2) and Apple silicon platforms (M1 max 10c CPU + 32c GPU + 64Gb RAM). Some performance insights for M1 max using RTX 2060 as a reference can be gained. 
+(3) This repo is tested on both Nvidia (ubuntu 20.04 + i7 9700 + 32Gb RAM + RTX 2060 + cuda 11.2) and Apple silicon platforms (M1 max 10c CPU + 32c GPU + 64Gb RAM). For Apple silicon, Tensorflow plugin is installed to utilize M1 max GPU for training. Installation instruction can be found at https://developer.apple.com/metal/tensorflow-plugin/ 
 
+
+Some performance insights for M1 max using RTX 2060 as a reference can be gained. 
 
 In general, for the small neural network for this case (mainly 2D cnn), RTX 2060 is ~35% percent faster than M1 max. 
 
