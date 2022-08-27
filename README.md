@@ -28,7 +28,7 @@ At the early state of training (mean reward = -10)
 
 https://user-images.githubusercontent.com/6441064/187033061-b1ff693b-f599-4d14-86b2-00c743c98c12.mp4
 
-At the end of the training (mean reaard = 19) 
+At the end of the training (mean reward = 19) 
 
 https://user-images.githubusercontent.com/6441064/187033067-5254b347-c7e5-4977-afe9-859daa7c4667.mp4
 
