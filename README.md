@@ -24,3 +24,7 @@ The code was run twice for both the platform . The the tensorboad training plots
 
 
 
+https://user-images.githubusercontent.com/6441064/187032968-53ecc7dd-9d46-42ab-ab2f-67201354bf54.mp4
+
+
+
