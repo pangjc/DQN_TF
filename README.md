@@ -8,7 +8,7 @@ Deep Q Network implemented using Tensorflow
 (3) This repo is tested on both Nvidia (ubuntu 20.04 + i7 9700 + 32Gb RAM + RTX 2060 + cuda 11.2) and Apple silicon platforms (M1 max 10c CPU + 32c GPU + 64Gb RAM). Some performance insights for M1 max using RTX 2060 as a reference can be gained. 
 
 
-In general, for the small neural network for this case (mainly 2D cnn), RTX 2060 is ~35% percent fast than M1 max. 
+In general, for the small neural network for this case (mainly 2D cnn), RTX 2060 is ~35% percent faster than M1 max. 
 
 Performance Comparison (M1 max vs RTX 2060) 
 
