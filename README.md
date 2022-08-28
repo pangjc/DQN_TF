@@ -26,6 +26,7 @@ The code was run twice for both the platform . The the tensorboad training plots
 (4) Once a model is trained, a simulation video for the game can be generated using the script 01_tf_dqn_play.py in the repo.
  
 When the model is tranind (mean reward achieves 19), the simulated game video is show below (right: the trained model).
+
 https://user-images.githubusercontent.com/6441064/187033429-da68b3b3-42e5-4735-a407-c3d14729dc31.mp4
 
 
