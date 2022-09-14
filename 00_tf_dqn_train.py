@@ -1,24 +1,24 @@
+import wandb
+import tensorflow as tf
+
+from tensorflow.keras.optimizers import Adam
+
+import random
+import argparse
+import numpy as np
+import collections
+from tensorflow import keras
+from keras import layers
+
 from lib.utilities import DQN 
 from lib.utilities import ExperienceBuffer
 from lib.utilities import Experience
 from lib import tf_wrappers
 
-import random
-import argparse
-import time
-import numpy as np
-import collections
-import tensorflow as tf
-from tensorflow import keras
-from keras import layers
-
-import datetime
-import absl.logging
-
-absl.logging.set_verbosity(absl.logging.ERROR)
+wandb.init(name='DQN', project="deep-rl-atari")
 
 DEFAULT_ENV_NAME = "PongNoFrameskip-v4"
-MEAN_REWARD_BOUND = 19
+MEAN_REWARD_BOUND = 17
 
 GAMMA = 0.99
 BATCH_SIZE = 32
@@ -33,30 +33,40 @@ EPSILON_FINAL = 0.01
 
 SEED = 123
 
-DQN_NAME = 'BASIC_pc'
+DQN_NAME = 'BASIC_DQN'
 OUTPUT_PATH = './'
+
+class ActionStateModel:
+    def __init__(self, state_dim, action_dim):
+        self.state_dim  = state_dim
+        self.action_dim = action_dim
+      
+        self.model = self.create_model()
+
+    def create_model(self):
+        model = DQN(input_shape = self.state_dim, n_actions = self.action_dim)
+        model.build(input_shape = (None, *self.state_dim))
+        return model
+
+    def predict(self, state):
+        return self.model(state)
 
 class Agent:
     def __init__(self, env):
         self.env = env
-        self.exp_buffer = ExperienceBuffer(REPLAY_SIZE)
+        self.state_dim = self.env.observation_space.shape
+        self.action_dim = self.env.action_space.n
 
-        self.net = DQN(input_shape = env.observation_space.shape, n_actions = env.action_space.n)
-        self.tgt_net = DQN(input_shape = env.observation_space.shape,n_actions = env.action_space.n)
-        self.net.build(input_shape = (None, *env.observation_space.shape))
-        self.tgt_net.build(input_shape = (None, *env.observation_space.shape))
+        self.model = ActionStateModel(self.state_dim, self.action_dim)
+        self.target_model = ActionStateModel(self.state_dim, self.action_dim)
+        self.target_update()
+        self.buffer = ExperienceBuffer(REPLAY_SIZE)
 
         self.total_rewards = []
         self.best_m_reward = None
         self.frame_idx = 0
         self.epsilon = EPSILON_START 
-        self.optimizer = tf.optimizers.Adam(learning_rate=LEARNING_RATE)
-        
-        self.current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.train_log_dir = OUTPUT_PATH + 'logs/' + self.current_time + '/train_'+ DQN_NAME
-        self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir,flush_millis=1000)
-        self.ts_frame = 0
-        self.ts = time.time()
+        self.optimizer = Adam(learning_rate=LEARNING_RATE)
 
         self._reset()
 
@@ -65,7 +75,8 @@ class Agent:
         self.total_reward = 0.0
 
     def target_update(self):
-        self.tgt_net.set_weights(self.net.get_weights()) 
+        weights = self.model.model.get_weights()
+        self.target_model.model.set_weights(weights)
 
     def play_step(self, epsilon=0.01):
         done_reward = None
@@ -75,7 +86,7 @@ class Agent:
 
         else:
             state_v = np.expand_dims(self.state,axis=0) 
-            q_vals_v = self.net(state_v)
+            q_vals_v = self.model.predict(state_v)
             action_v = tf.math.argmax(q_vals_v,axis=1)
             action = action_v[0] 
 
@@ -83,7 +94,7 @@ class Agent:
         self.total_reward += reward
 
         exp = Experience(self.state, action, reward, is_done, new_state)
-        self.exp_buffer.append(exp)
+        self.buffer.append(exp)
         self.state = new_state
         
         if is_done:
@@ -92,39 +103,15 @@ class Agent:
 
         return done_reward
 
-    def training_recording(self,loss_t,m_reward,train_loss,train_reward):
-        train_reward(m_reward)
-        with self.train_summary_writer.as_default():
-            tf.summary.scalar('reward', train_reward.result(), step=self.frame_idx)
-        train_reward.reset_states()
-        train_loss(loss_t)
-        with self.train_summary_writer.as_default():
-            tf.summary.scalar('loss', train_loss.result(), step=self.frame_idx)
-        train_loss.reset_states()
-     
-
-    def record_display_record(self,m_reward):
-        speed = (self.frame_idx-self.ts_frame)/(time.time()-self.ts)
-        self.ts_frame = self.frame_idx
-        self.ts = time.time()
-        print("%d done %d games, reward %.3f, " "eps %.2f, speed %.2f f/s" %(
-                self.frame_idx, len(self.total_rewards), m_reward, self.epsilon, speed)
-            )
-        if self.best_m_reward is not None and self.best_m_reward < m_reward:
-            print("Best reward update %.3f -> %.3f" % (self.best_m_reward, m_reward))
-        if m_reward > MEAN_REWARD_BOUND:
-            print("Solved in %d frames!" % self.frame_idx)
-
-
     def calc_loss(self, batch):
 
         states, actions, rewards, dones, next_states = batch
         done_mask = tf.convert_to_tensor(1-dones.astype(float),dtype=tf.float32)
         ###done_mask = dones
-        q_vals_v = self.net(states)
+        q_vals_v = self.model.predict(states)
     
         state_action_values = tf.gather(q_vals_v,actions, axis=1,batch_dims=1)
-        next_state_values = tf.math.reduce_max(self.tgt_net(next_states),axis=1)
+        next_state_values = tf.math.reduce_max(self.target_model.predict(next_states),axis=1)
 
         ### Tensor can not be sliced and assigned, so using the following way to bybass this restrctions
         ### https://github.com/tensorflow/tensorflow/issues/14132#issuecomment-483002522
@@ -139,9 +126,6 @@ class Agent:
 
     def train(self,max_frames = 1000000):
 
-        train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
-        train_reward = tf.keras.metrics.Mean('m_reward', dtype=tf.float32)
-
         while self.frame_idx<max_frames:
             self.frame_idx +=1
             self.epsilon = max(EPSILON_FINAL, EPSILON_START -
@@ -152,36 +136,38 @@ class Agent:
             if reward is not None:
                 self.total_rewards.append(reward)
                 m_reward = np.mean(self.total_rewards[-100:]) ## Why last 100 episode??
-                self.record_display_record(m_reward)
+                print("%d done %d games, reward %.3f, " "eps %.2f" %(self.frame_idx, len(self.total_rewards), m_reward, self.epsilon))
+            
 
                 if self.best_m_reward is None or self.best_m_reward < m_reward:
                     model_name = OUTPUT_PATH + DEFAULT_ENV_NAME + "-" + DQN_NAME + "-best_%0f" % m_reward
                     if m_reward > MEAN_REWARD_BOUND-0.5:
-                        tf.keras.models.save_model(self.net,model_name)
+                        tf.keras.models.save_model(self.model.model,model_name)
                     
                     if self.best_m_reward is not None:
-                        self.record_display_record(m_reward)
                         self.best_m_reward = m_reward
 
                 if m_reward > MEAN_REWARD_BOUND:
-                    self.record_display_record(m_reward)
                     break
 
-            if len(self.exp_buffer) < REPLAY_START_SIZE:
+            if len(self.buffer) < REPLAY_START_SIZE:
                 continue
 
             if self.frame_idx % SYNC_TARGET_FRAMES == 0:       
                 self.target_update()
 
-            batch = self.exp_buffer.sample(BATCH_SIZE)
+            batch = self.buffer.sample(BATCH_SIZE)
+
+            loss_t = self.calc_loss(batch)
 
             with tf.GradientTape() as tape:
                 loss_t = self.calc_loss(batch)
-                ###print("frame_idx: %d, loss_t: %.3f " % (frame_idx, loss_t.numpy()))
-            gradients = tape.gradient(loss_t,self.net.trainable_weights)
-            self.optimizer.apply_gradients(zip(gradients,self.net.trainable_weights))
+            gradients = tape.gradient(loss_t,self.model.model.trainable_weights)
+            self.optimizer.apply_gradients(zip(gradients,self.model.model.trainable_weights))
+
             if self.frame_idx % 100 == 0:     
-                self.training_recording(loss_t, m_reward, train_loss, train_reward)
+                log_dict = {"loss": loss_t, "m_reward": m_reward, "games:": len(self.total_rewards)}
+                wandb.log(log_dict,step=self.frame_idx)
 
 
 if __name__ == "__main__":
